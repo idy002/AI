@@ -1,0 +1,77 @@
+Excited! Get given seed = 9312059134
+caseno = 1, caseno = 1
+caseno = 2, caseno = 1
+show_init 6 7 7 11 9 3 8 9 9 7 6 5 6 4 4 8 5 10 1 10 2 8 0 3 2 
+caseno = 3, caseno = 1
+get_init 
+6 7 7 11 9 3 8 9 9 7 6 5 6 4 4 8 5 10 1 10 2 8 0 3 2 
+6 7 7 11 9 3 8 9 9 7 6 5 6 4 10 8 5 4 0 10 2 8 1 3 2 
+连 排 排 旗 雷 
+旅 兵 雷 雷 排 
+连    营    连 
+团 团    兵 营 
+炸    军    炸 
+师 兵 司 旅 师 
+               
+               
+               
+               
+               
+师 旅 军 兵 师 
+炸    司    团 
+营 兵    炸 团 
+连    营    连 
+排 雷 雷 兵 旅 
+雷 旗 排 排 连 
+cboard:
+21 23 19 19 18 
+19 21 21 20 15 
+18 -2 17 -2 18 
+17 20 -2 22 16 
+22 -2 12 -2 16 
+14 15 13 20 14 
+-2 -2 -2 -2 -2 
+-2 -2 -2 -2 -2 
+-2 -2 -2 -2 -2 
+-2 -2 -2 -2 -2 
+-2 -2 -2 -2 -2 
+2 8 0 3 2 
+10 -2 1 -2 10 
+4 4 -2 8 5 
+6 -2 5 -2 6 
+3 8 9 9 7 
+6 7 7 11 9 
+
+caseno = 4, caseno = 1
+finished search total_nodes = 8162 maxdepth = 4 evalute value = 490
+search 8162 nodes
+idy002: action: (5 2 司) -> (11 2 军) 
+caseno = 5, caseno = 3
+idy002: message: 5 2 11 2 0
+caseno = 6, caseno = 3
+idy002: message: 12 2 11 2 -2
+caseno = 7, caseno = 3
+finished search total_nodes = 20840 maxdepth = 4 evalute value = 453
+search 20840 nodes
+idy002: action: (4 0 炸) -> (4 1   ) 
+caseno = 8, caseno = 5
+idy002: message: 4 0 4 1 10
+caseno = 9, caseno = 5
+idy002: message: 11 4 5 4 -2
+caseno = 10, caseno = 5
+finished search total_nodes = 23988 maxdepth = 4 evalute value = 532
+search 23988 nodes
+idy002: action: (5 1 兵) -> (11 3 兵) 
+caseno = 11, caseno = 7
+idy002: message: 5 1 11 3 -2
+caseno = 12, caseno = 7
+idy002: message: 12 4 4 4 -2
+caseno = 13, caseno = 7
+finished search total_nodes = 14053 maxdepth = 4 evalute value = 493
+search 14053 nodes
+idy002: action: (5 3 旅) -> (5 4   ) 
+caseno = 14, caseno = 9
+idy002: message: 5 3 5 4 3
+caseno = 15, caseno = 9
+idy002: message: 11 1 11 4 15
+caseno = 16, caseno = 9
