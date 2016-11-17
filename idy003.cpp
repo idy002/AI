@@ -121,36 +121,27 @@ void init() {
 	sidesh[16][0] = sidesh[16][2] = sidesh[16][4] = 1;
 	sidesh[15][1] = sidesh[15][2] = 1;
 }
-/*
-# 0 司令 * 1
-# 1 军长 * 1
-# 2 师长 * 2
-# 3 旅长 * 2
-# 4 团长 * 2
-# 5 营长 * 2
-# 6 连长 * 3
-# 7 排长 * 3
-# 8 工兵 * 3
-# 9 地雷 * 3
-# 10炸弹 * 2
-# 11军旗 * 1 
-*/
-int kind_score[12][3] = { 
-	{ 100 },					//# 0 司令 * 1
-	{ 67 }, 				//# 1 军长 * 1
-	{ 54, 36},   				//# 2 师长 * 2
-	{ 31, 23},  				//# 3 旅长 * 2
-	{ 17, 15},  				//# 4 团长 * 2
-	{ 11, 9 },  				 //# 5 营长 * 2
-	{ 7,  6, 5 },  				//# 6 连长 * 3
-	{ 3, 3, 3 },   				//# 7 排长 * 3
-	{ 110, 44, 22 },  				//# 8 工兵 * 3
-	{ 11, 31, 120 },  				//# 9 地雷 * 3
-	{ 70, 35 },  				//# 10炸弹 * 2
-	{ 10000000 }			//# 11军旗 * 1 
+int kind_score[12] = {
+	1000,	// 0  司令 * 1
+	800,	// 1  军长 * 1
+	500,	// 2  师长 * 2
+	300,	// 3  旅长 * 2
+	200,	// 4  团长 * 2
+	150,	// 5  营长 * 2
+	100,	// 6  连长 * 3
+	75,		// 7  排长 * 3
+	0,		// 8  工兵 * 3
+	800,	// 9  地雷 * 3
+	0,		// 10 炸弹 * 2
+	5000000	// 11 军旗 * 1 
 };
+bool isvalid( int i, int j ) {
+	if( i < 0 || i > 16 ) return false;
+	if( j < 0 || j > 4 ) return false;
+	return valid[i][j];
+}
 int evaluate( const Board &board ) {
-	int rt = 0;
+	int score = 0;
 	static int cnt[2][12];
 
 	for( int c = 0; c < 2; c++ )
@@ -158,40 +149,46 @@ int evaluate( const Board &board ) {
 			cnt[c][i] = 0;
 	for( int i = 0; i <= 16; i++ )
 		for( int j = 0; j < 5; j++ ) {
-			if( board[i][j] != -2 ) {
-				if( strongholds[i][j] ) continue;
-				int v = board[i][j];
-				int c = chess(v);
-				int curid = belong(v);
-				int dist = abs(i-flag_pos[curid^1][0]) + abs(j-flag_pos[curid^1][1]);
-				int sgn = curid == id ? 1 : -1;
-				int skind = kind_score[c][cnt[curid][c]];
-				int sdist = 10 + (20-dist) * 10 / 20;
-				if( c == 9 ) {
-					skind += 30 * (sidesh[i][j] + railway[i][j]);
+			int v = board[i][j];
+			if( v == -2 ) continue;
+			if( strongholds[i][j] ) continue;
+			int chs = chess(v);
+			int bel = belong(v);
+			int skind;
+			if( chs <= 7 || chs == 11 ) {
+				skind = kind_score[chs];
+				if( railway[i][j] ) skind += 20;
+				if( safezone[i][j] ) skind += 20;
+				if( (bel==0 && i>=11) || (bel==1 && i<=5) ) skind += 30;
+			} else {
+				if( chs == 8 ) {
+					if( cnt[bel][chs] == 1 )
+						skind = 750;
+					else if( cnt[bel][chs] == 2 )
+						skind = 500;
+					else if( cnt[bel][chs] == 3 )
+						skind = 300;
+				} else if( chs == 9 ) {
+					skind = cnt[bel][9] == 3 ? kind_score[chs] : 0;
+				} else {
+					int best = 7;
+					for( int j = 0; j <= 7; j++ )
+						if( cnt[bel^1][j] ) {
+							best = j;
+							break;
+						}
+					skind = kind_score[best] - 50;
 				}
-				if( c == 8 ) {
-					skind += 10 * (railway[i][j]);
-				}
-				if( safezone[i][j] ) {
-					if( ((curid == 0) && (i > 5))
-					  ||((curid == 1) && (i <= 5) ) )
-						skind += 15;
-					else
-						skind += 5;
-				}
-				cnt[curid][c]++;
-				rt += sgn * skind * sdist;
 			}
+			if( bel == id )
+				score += skind;
+			else
+				score -= skind;
+
 		}
-	return rt;
+	return score;
 }
-bool isvalid( int i, int j ) {
-	if( i < 0 || i > 16 ) return false;
-	if( j < 0 || j > 4 ) return false;
-	return valid[i][j];
-}
-/*
+	/*
 # kind 
 # 0 司令 * 1
 # 1 军长 * 1
@@ -205,7 +202,7 @@ bool isvalid( int i, int j ) {
 # 9 地雷 * 3
 # 10炸弹 * 2
 # 11军旗 * 1 
-*/					   
+	*/					   
 int fight( int ca, int ka, int cb, int kb ) {
 	if( ka == 10 || kb == 10 ) return -2;
 	if( kb == 11 ) return ca * Kindcnt + ka;
@@ -392,6 +389,8 @@ int max_search( int maxdep, int curdep, Board &board, int alpha, int beta ) {
 		if( val < sval ) {
 			val = sval;
 			if( curdep == 0 ) final_dec = dec;
+		} else if( val == sval ) {
+			if( curdep == 0 && (rand()&1) ) final_dec = dec;
 		}
 		if( val >= beta ) return val;
 	}
@@ -483,18 +482,18 @@ void get_init() {
 	cboard.print();
 }
 void show_init() {
-int init[10][25] = { 
-{ 6 , 7 , 7 , 11 , 9 , 3 , 8 , 9 , 9 , 7 , 6 , 5 , 6 , 4 , 4 , 8 , 5 , 10 , 1 , 10 , 2 , 8 , 0 , 3 , 2 , },
-{ 4 , 7 , 9 , 11 , 9 , 0 , 8 , 5 , 9 , 7 , 1 , 8 , 6 , 10 , 5 , 4 , 3 , 3 , 6 , 10 , 2 , 8 , 6 , 7 , 2 , },
-{ 9 , 11 , 3 , 7 , 8 , 9 , 9 , 6 , 2 , 10 , 7 , 5 , 5 , 4 , 7 , 6 , 8 , 2 , 10 , 1 , 6 , 3 , 0 , 8 , 4 , },
-{ 9 , 11 , 9 , 7 , 6 , 3 , 8 , 8 , 7 , 9 , 5 , 7 , 5 , 4 , 10 , 10 , 4 , 2 , 6 , 3 , 6 , 0 , 1 , 8 , 2 , },
-{ 3 , 11 , 9 , 7 , 8 , 5 , 9 , 6 , 9 , 4 , 10 , 7 , 6 , 2 , 10 , 6 , 0 , 4 , 8 , 3 , 2 , 8 , 1 , 7 , 5 , },
-{ 8 , 9 , 5 , 11 , 9 , 3 , 10 , 3 , 6 , 9 , 4 , 6 , 5 , 2 , 7 , 10 , 2 , 0 , 6 , 7 , 1 , 8 , 8 , 7 , 4 , },
-{ 10 , 7 , 9 , 11 , 9 , 10 , 3 , 2 , 5 , 9 , 6 , 8 , 4 , 3 , 6 , 1 , 7 , 2 , 8 , 0 , 5 , 8 , 4 , 7 , 6 , },
-{ 9 , 11 , 9 , 7 , 5 , 9 , 5 , 2 , 10 , 3 , 7 , 6 , 3 , 2 , 10 , 8 , 6 , 6 , 8 , 4 , 4 , 7 , 1 , 8 , 0 , },
-{ 7 , 7 , 9 , 11 , 9 , 5 , 3 , 6 , 9 , 6 , 7 , 10 , 4 , 0 , 8 , 10 , 2 , 5 , 8 , 1 , 4 , 8 , 3 , 2 , 6 , },
-{ 9 , 11 , 9 , 7 , 7 , 1 , 6 , 3 , 9 , 10 , 10 , 8 , 3 , 4 , 5 , 5 , 2 , 2 , 6 , 0 , 6 , 7 , 8 , 8 , 4 , },
-};
+	int init[10][25] = { 
+	{ 6 , 7 , 7 , 11 , 9 , 3 , 8 , 9 , 9 , 7 , 6 , 5 , 6 , 4 , 4 , 8 , 5 , 10 , 1 , 10 , 2 , 8 , 0 , 3 , 2 , },
+	{ 4 , 7 , 9 , 11 , 9 , 0 , 8 , 5 , 9 , 7 , 1 , 8 , 6 , 10 , 5 , 4 , 3 , 3 , 6 , 10 , 2 , 8 , 6 , 7 , 2 , },
+	{ 9 , 11 , 3 , 7 , 8 , 9 , 9 , 6 , 2 , 10 , 7 , 5 , 5 , 4 , 7 , 6 , 8 , 2 , 10 , 1 , 6 , 3 , 0 , 8 , 4 , },
+	{ 9 , 11 , 9 , 7 , 6 , 3 , 8 , 8 , 7 , 9 , 5 , 7 , 5 , 4 , 10 , 10 , 4 , 2 , 6 , 3 , 6 , 0 , 1 , 8 , 2 , },
+	{ 3 , 11 , 9 , 7 , 8 , 5 , 9 , 6 , 9 , 4 , 10 , 7 , 6 , 2 , 10 , 6 , 0 , 4 , 8 , 3 , 2 , 8 , 1 , 7 , 5 , },
+	{ 8 , 9 , 5 , 11 , 9 , 3 , 10 , 3 , 6 , 9 , 4 , 6 , 5 , 2 , 7 , 10 , 2 , 0 , 6 , 7 , 1 , 8 , 8 , 7 , 4 , },
+	{ 10 , 7 , 9 , 11 , 9 , 10 , 3 , 2 , 5 , 9 , 6 , 8 , 4 , 3 , 6 , 1 , 7 , 2 , 8 , 0 , 5 , 8 , 4 , 7 , 6 , },
+	{ 9 , 11 , 9 , 7 , 5 , 9 , 5 , 2 , 10 , 3 , 7 , 6 , 3 , 2 , 10 , 8 , 6 , 6 , 8 , 4 , 4 , 7 , 1 , 8 , 0 , },
+	{ 7 , 7 , 9 , 11 , 9 , 5 , 3 , 6 , 9 , 6 , 7 , 10 , 4 , 0 , 8 , 10 , 2 , 5 , 8 , 1 , 4 , 8 , 3 , 2 , 6 , },
+	{ 9 , 11 , 9 , 7 , 7 , 1 , 6 , 3 , 9 , 10 , 10 , 8 , 3 , 4 , 5 , 5 , 2 , 2 , 6 , 0 , 6 , 7 , 8 , 8 , 4 , },
+	};
 	int i = 0;
 	cerr << "show_init" << " ";
 	for( int j = 0; j < 25; j++ ) {
@@ -518,7 +517,6 @@ void make_decision( int &sx, int &sy, int &tx, int &ty ) {
 	tx = dec.tx;
 	ty = dec.ty;
 }
-
 int main(int argc, char** argv) {
 	unsigned seed = time(0);
 	if (argc == 2) {
