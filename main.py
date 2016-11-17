@@ -24,7 +24,7 @@ init_board = []
 def action(ai):
 	try:
 		ai.send('action\n')
-		message = ai.recv(timeout=2)
+		message = ai.recv(timeout=10)
 		posx, posy, tox, toy = map(int, message.strip().split(' '))
 	except Empty as e:
 		return { 'err': 'timeout' }

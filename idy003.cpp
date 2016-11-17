@@ -132,13 +132,23 @@ int kind_score[12] = {
 	75,		// 7  排长 * 3
 	0,		// 8  工兵 * 3
 	800,	// 9  地雷 * 3
-	0,		// 10 炸弹 * 2
+	-310,	// 10 炸弹 * 2
 	5000000	// 11 军旗 * 1 
 };
 bool isvalid( int i, int j ) {
 	if( i < 0 || i > 16 ) return false;
 	if( j < 0 || j > 4 ) return false;
 	return valid[i][j];
+}
+bool isvalid_move( int ca, int cb ) {
+	if( cb == 11 ) return true;
+	if( cb == 10 ) return true;
+	if( cb == 9 ) {
+		if( ca == 8 || ca == 10 ) return true;
+		else return false;
+	}
+	if( ca == 10 ) return true;
+	return ca <= cb;
 }
 int evaluate( const Board &board ) {
 	int score = 0;
@@ -151,9 +161,18 @@ int evaluate( const Board &board ) {
 		for( int j = 0; j < 5; j++ ) {
 			int v = board[i][j];
 			if( v == -2 ) continue;
-			if( strongholds[i][j] ) continue;
 			int chs = chess(v);
 			int bel = belong(v);
+			if( strongholds[i][j] && chs != 11 ) continue;
+			cnt[bel][chs]++;
+		}
+	for( int i = 0; i <= 16; i++ )
+		for( int j = 0; j < 5; j++ ) {
+			int v = board[i][j];
+			if( v == -2 ) continue;
+			int chs = chess(v);
+			int bel = belong(v);
+			if( strongholds[i][j] && chs != 11 ) continue;
 			int skind;
 			if( chs <= 7 || chs == 11 ) {
 				skind = kind_score[chs];
@@ -177,7 +196,7 @@ int evaluate( const Board &board ) {
 							best = j;
 							break;
 						}
-					skind = kind_score[best] - 50;
+					skind = max( kind_score[3], kind_score[best] + kind_score[chs] );
 				}
 			}
 			if( bel == id )
@@ -296,7 +315,8 @@ void generate_next( const Board &board,
 							if( vis[ii][jj] == visc ) continue;
 							if( chess(c) != 8 && ((ii!=i) + (jj!=j) == 2) ) continue;
 							if( board[ii][jj] == -2 ) {
-								vc.push_back( Decision(i,j,ii,jj)  );
+								if( board[ii][jj] == -2 || isvalid_move(chess(c),chess(board[ii][jj])) )
+									vc.push_back( Decision(i,j,ii,jj)  );
 								vis[ii][jj] = visc;
 								qu[++ed] = Pos(ii,jj);
 							} else if( belong(board[ii][jj]) != curid ) {
@@ -310,7 +330,8 @@ void generate_next( const Board &board,
 						if( isvalid(ii,jj) && belong(board[ii][jj]) != curid ) {
 							if( railway[ii][jj] ) continue;
 							if( !safezone[ii][jj] || (safezone[ii][jj] && board[ii][jj]==-2) ) {
-								vc.push_back( Decision(i,j,ii,jj)  );
+								if( board[ii][jj] == -2 || isvalid_move(chess(c),chess(board[ii][jj])) )
+									vc.push_back( Decision(i,j,ii,jj)  );
 							}
 						}
 					}
@@ -320,7 +341,8 @@ void generate_next( const Board &board,
 							if( !safezone[ii][jj] && !safezone[i][j] ) continue;
 							if( railway[ii][jj] ) continue;
 							if( !safezone[ii][jj] || (safezone[ii][jj] && board[ii][jj]==-2) ) {
-								vc.push_back( Decision(i,j,ii,jj)  );
+								if( board[ii][jj] == -2 || isvalid_move(chess(c),chess(board[ii][jj])) )
+									vc.push_back( Decision(i,j,ii,jj)  );
 							}
 						}
 					}
@@ -329,7 +351,8 @@ void generate_next( const Board &board,
 						int ii = i + dx[d], jj = j + dy[d];
 						if( isvalid(ii,jj) && belong(board[ii][jj]) != curid ) {
 							if( !safezone[ii][jj] || (safezone[ii][jj] && board[ii][jj]==-2) ) {
-								vc.push_back( Decision(i,j,ii,jj)  );
+								if( board[ii][jj] == -2 || isvalid_move(chess(c),chess(board[ii][jj])) )
+									vc.push_back( Decision(i,j,ii,jj)  );
 							}
 						}
 					}
@@ -338,7 +361,8 @@ void generate_next( const Board &board,
 						if( isvalid(ii,jj) && belong(board[ii][jj]) != curid ) {
 							if( !safezone[ii][jj] && !safezone[i][j] ) continue;
 							if( !safezone[ii][jj] || (safezone[ii][jj] && board[ii][jj]==-2) ) {
-								vc.push_back( Decision(i,j,ii,jj)  );
+								if( board[ii][jj] == -2 || isvalid_move(chess(c),chess(board[ii][jj])) )
+									vc.push_back( Decision(i,j,ii,jj)  );
 							}
 						}
 					}
@@ -374,7 +398,9 @@ int max_search( int maxdep, int curdep, Board &board, int alpha, int beta ) {
 		order.push_back( make_pair(evaluate(board,vc[t]), t) );
 	sort( order.begin(), order.end(), greater<pair<int,int> >() );
 
-	for( int tt = 0; tt < (int)order.size(); tt++ ) {
+	//int maxtt = max( (int)order.size()/2, min( 20, (int)vc.size() ) );
+	int maxtt = (int)order.size();
+	for( int tt = 0; tt < maxtt; tt++ ) {
 		int t = order[tt].second;
 		Decision &dec = vc[t];
 		int sa = board[dec.sx][dec.sy];
@@ -411,7 +437,9 @@ int min_search( int maxdep, int curdep, Board &board, int alpha, int beta ) {
 		order.push_back( make_pair(evaluate(board,vc[t]), t) );
 	sort( order.begin(), order.end(), less<pair<int,int> >() );
 
-	for( int tt = 0; tt < (int)order.size(); tt++ ) {
+	//int maxtt = max( (int)order.size()/2, min( 20, (int)vc.size() ) );
+	int maxtt = (int)order.size();
+	for( int tt = 0; tt < maxtt; tt++ ) {
 		int t = order[tt].second;
 		Decision &dec = vc[t];
 		int sa = board[dec.sx][dec.sy];
@@ -510,7 +538,7 @@ void change( int x, int y, int xx, int yy, int color, int kind ) {
 }
 void make_decision( int &sx, int &sy, int &tx, int &ty ) {
 	total_nodes = 0;
-	Decision dec = search(4);
+	Decision dec = search(3);
 	fprintf( stderr, "search %d nodes\n", total_nodes );
 	sx = dec.sx;
 	sy = dec.sy;
